@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>대출 관리 시스템</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0f1117;color:#e8eaf0;font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;height:100vh;overflow:hidden}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:#1a1d2e}
+::-webkit-scrollbar-thumb{background:#2a2d3e;border-radius:3px}
+input,textarea,select,button{font-family:inherit}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.hidden{display:none!important}
+#loading{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0f1117;z-index:999}
+.spinner{width:36px;height:36px;border:3px solid #2a2d3e;border-top:3px solid #4f6ef7;border-radius:50%;animation:spin .8s linear infinite}
+#loading p{color:#6b7db3;margin-top:14px;font-size:14px}
+#login-page{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#0f1117}
+.login-card{background:#1a1d2e;border:1px solid #2a2d3e;border-radius:16px;padding:48px 40px;width:100%;max-width:400px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.5);animation:fadeIn .3s ease}
+.login-logo{font-size:48px;margin-bottom:16px}
+.login-title{font-size:22px;font-weight:700;color:#e8eaf0;margin-bottom:6px}
+.login-sub{color:#6b7db3;font-size:13px;margin-bottom:32px}
+.login-field{margin-bottom:18px;text-align:left}
+.login-label{display:block;color:#9aa5c4;font-size:12px;font-weight:600;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
+.login-input{width:100%;background:#0f1117;border:1px solid #2a2d3e;border-radius:8px;padding:12px 14px;color:#e8eaf0;font-size:14px;outline:none;transition:border-color .2s}
+.login-input:focus{border-color:#4f6ef7}
+.login-btn{width:100%;background:linear-gradient(135deg,#4f6ef7,#7c3aed);color:white;border:none;border-radius:8px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;margin-top:8px}
+.login-btn:disabled{opacity:.6}
+.login-error{color:#ef5350;font-size:13px;margin-bottom:12px;text-align:center;padding:8px;background:#2e1010;border-radius:6px}
+#app{display:flex;flex-direction:column;height:100vh}
+.header{display:flex;align-items:center;justify-content:space-between;padding:0 20px;height:52px;background:#1a1d2e;border-bottom:1px solid #2a2d3e;flex-shrink:0}
+.header-left{display:flex;align-items:center;gap:10px}
+.header-title{font-weight:700;font-size:15px}
+.header-right{display:flex;align-items:center;gap:12px}
+.user-email{color:#6b7db3;font-size:12px}
+.logout-btn{background:#2a2d3e;color:#9aa5c4;border:none;border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer}
+.tab-bar{display:flex;background:#1a1d2e;border-bottom:1px solid #2a2d3e;flex-shrink:0;padding:0 20px}
+.tab-btn{background:none;border:none;border-bottom:3px solid transparent;color:#6b7db3;padding:12px 18px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s}
+.tab-btn.active{color:#7c9ef8;border-bottom-color:#4f6ef7}
+#tab-loan,#tab-product{flex:1;overflow:hidden;display:flex;flex-direction:column}
+.loan-wrap{display:flex;flex:1;overflow:hidden}
+.sidebar{width:160px;background:#1a1d2e;border-right:1px solid #2a2d3e;display:flex;flex-direction:column;flex-shrink:0}
+.sidebar-header{padding:10px 14px;color:#7c9ef8;font-weight:700;font-size:12px;border-bottom:1px solid #2a2d3e}
+.company-list{flex:1;overflow-y:auto}
+.company-item{padding:11px 14px;color:#9aa5c4;cursor:pointer;font-size:13px;border-bottom:1px solid #1e2135;transition:all .15s}
+.company-item:hover{background:#1e2135;color:#c0c8e0}
+.company-item.active{background:#252840;color:#7c9ef8;border-left:3px solid #4f6ef7;padding-left:11px}
+.main-panel{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.main-header{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid #2a2d3e;background:#1a1d2e;flex-shrink:0;flex-wrap:wrap}
+.main-title{color:#e8eaf0;font-weight:700;font-size:14px;flex:1;min-width:80px}
+.search-input{background:#0f1117;border:1px solid #2a2d3e;border-radius:6px;padding:6px 10px;color:#e8eaf0;font-size:13px;width:150px;outline:none}
+.share-btn{background:#005588;color:white;border:none;border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer;font-weight:700}
+.loan-list{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px}
+.loan-item{background:#1a1d2e;border:1px solid #2a2d3e;border-radius:8px;padding:12px;animation:fadeIn .2s ease}
+.loan-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;gap:8px}
+.customer-info{flex:1}
+.customer-name{color:#e8eaf0;font-weight:700;font-size:14px}
+.customer-status{color:#7c9ef8;font-size:12px;margin-top:2px}
+.loan-actions{display:flex;gap:5px;flex-shrink:0}
+.edit-btn{background:#2a5298;color:white;border:none;border-radius:4px;padding:3px 9px;font-size:11px;cursor:pointer}
+.del-btn{background:#7a1e1e;color:white;border:none;border-radius:4px;padding:3px 9px;font-size:11px;cursor:pointer}
+.save-btn{background:#1a7a3a;color:white;border:none;border-radius:4px;padding:5px 12px;font-size:12px;cursor:pointer}
+.cancel-btn{background:#2a2d3e;color:#9aa5c4;border:none;border-radius:4px;padding:5px 12px;font-size:12px;cursor:pointer}
+.loan-details{color:#9aa5c4;font-size:13px;white-space:pre-wrap;line-height:1.6}
+.edit-form{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.edit-input{background:#0f1117;border:1px solid #2a2d3e;border-radius:6px;padding:7px 10px;color:#e8eaf0;font-size:13px;outline:none}
+.edit-input:focus{border-color:#4f6ef7}
+.edit-textarea{background:#0f1117;border:1px solid #2a2d3e;border-radius:6px;padding:7px 10px;color:#e8eaf0;font-size:13px;resize:vertical;outline:none}
+.edit-textarea:focus{border-color:#4f6ef7}
+.edit-actions{display:flex;gap:6px}
+.add-row{padding:10px 14px;border-top:1px solid #2a2d3e;display:flex;gap:8px;flex-shrink:0}
+.add-input{flex:1;background:#1a1d2e;border:1px solid #2a2d3e;border-radius:6px;padding:8px 12px;color:#e8eaf0;font-size:13px;outline:none}
+.add-input:focus{border-color:#4f6ef7}
+.add-btn{background:#4f6ef7;color:white;border:none;border-radius:6px;padding:8px 14px;font-size:13px;cursor:pointer;font-weight:700}
+.panels{width:250px;display:flex;flex-direction:column;border-left:1px solid #2a2d3e;flex-shrink:0}
+.shared-panel{flex:1;display:flex;flex-direction:column;border-bottom:1px solid #2a2d3e}
+.shared-header{padding:9px 12px;color:#7c9ef8;font-weight:700;font-size:12px;background:#1a1d2e;border-bottom:1px solid #2a2d3e}
+.shared-area{flex:1;background:#0f1117;border:none;color:#e8eaf0;font-size:13px;padding:12px;resize:none;outline:none;line-height:1.7}
+.product-wrap{display:flex;flex:1;overflow:hidden}
+.product-sidebar{width:250px;background:#1a1d2e;border-right:1px solid #2a2d3e;display:flex;flex-direction:column;flex-shrink:0}
+.product-top{padding:10px;display:flex;gap:8px;border-bottom:1px solid #2a2d3e}
+.product-search{flex:1;background:#0f1117;border:1px solid #2a2d3e;border-radius:6px;padding:7px 10px;color:#e8eaf0;font-size:13px;outline:none}
+.product-add-btn{background:#4f6ef7;color:white;border:none;border-radius:6px;padding:7px 12px;font-size:12px;cursor:pointer;font-weight:700;flex-shrink:0}
+.product-count{padding:5px 12px;color:#6b7db3;font-size:11px}
+.product-list{flex:1;overflow-y:auto}
+.product-item{padding:10px 13px;cursor:pointer;border-bottom:1px solid #1e2135;transition:all .15s}
+.product-item:hover{background:#1e2135}
+.product-item.active{background:#252840}
+.product-name-row{display:flex;align-items:center;gap:4px;font-weight:600;font-size:13px}
+.stop-dot{color:#ef5350;font-size:10px}
+.product-sub{color:#6b7db3;font-size:11px;margin-top:3px}
+.product-detail{flex:1;overflow-y:auto;padding:20px}
+.product-placeholder{display:flex;align-items:center;justify-content:center;height:200px;color:#3a4060;font-size:15px}
+.detail-stop{background:#3a1010;color:#ef5350;border-radius:6px;padding:7px 12px;font-weight:700;font-size:12px;margin-bottom:12px;display:inline-block}
+.detail-name{color:#e8eaf0;font-size:20px;font-weight:700;margin-bottom:4px}
+.detail-product-lbl{color:#7c9ef8;font-size:13px;margin-bottom:14px}
+.detail-btn-row{display:flex;gap:8px;margin-bottom:16px}
+.detail-edit-btn{background:#2a5298;color:white;border:none;border-radius:6px;padding:7px 14px;font-size:12px;cursor:pointer}
+.detail-del-btn{background:#7a1e1e;color:white;border:none;border-radius:6px;padding:7px 14px;font-size:12px;cursor:pointer}
+.detail-sep{border:none;border-top:1px solid #2a2d3e;margin:12px 0}
+.d-field{margin-bottom:12px}
+.d-label{color:#6b7db3;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
+.d-val{color:#e8eaf0;font-size:13px;line-height:1.6}
+.d-region{color:#7c9ef8;font-size:13px;line-height:1.7}
+.tag{display:inline-block;border-radius:4px;padding:2px 8px;font-size:11px;margin:2px;background:#252840;color:#7c9ef8}
+.tag.green{background:#1a2e1a;color:#4caf50}
+.tag.red{background:#2e1a1a;color:#ef5350}
+.d-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:12px}
+.form-wrap{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.form-header{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;background:#1a1d2e;border-bottom:1px solid #2a2d3e;flex-shrink:0}
+.form-title{color:#e8eaf0;font-size:16px;font-weight:700}
+.form-body{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:14px}
+.f-section{background:#1a1d2e;border:1px solid #2a2d3e;border-radius:8px;padding:16px}
+.f-section-title{color:#7c9ef8;font-weight:700;font-size:12px;margin-bottom:14px}
+.f-row{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.f-label{color:#9aa5c4;font-size:13px;min-width:90px;flex-shrink:0}
+.f-input{flex:1;background:#0f1117;border:1px solid #2a2d3e;border-radius:6px;padding:7px 10px;color:#e8eaf0;font-size:13px;outline:none}
+.f-input:focus{border-color:#4f6ef7}
+.f-select{flex:1;background:#0f1117;border:1px solid #2a2d3e;border-radius:6px;padding:7px 10px;color:#e8eaf0;font-size:13px;outline:none}
+.region-wrap{display:flex;gap:10px;height:210px}
+.sido-list{width:120px;overflow-y:auto;display:flex;flex-direction:column;gap:2px;flex-shrink:0}
+.sido-btn{background:#1e2135;color:#9aa5c4;border:1px solid #2a2d3e;border-radius:4px;padding:5px 8px;font-size:11px;cursor:pointer;text-align:left}
+.sido-btn.active{background:#252840;color:#7c9ef8;border-color:#4f6ef7}
+.gu-wrap{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.gu-ctrl{display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+.gu-ctrl-title{color:#9aa5c4;font-size:11px;flex:1}
+.small-btn{background:#4f6ef7;color:white;border:none;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer}
+.small-btn.gray{background:#2a2d3e;color:#9aa5c4}
+.gu-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:4px;overflow-y:auto;flex:1}
+.gu-label{display:flex;align-items:center;gap:3px;cursor:pointer;font-size:12px;color:#9aa5c4;padding:2px}
+.gu-label.on{color:#7c9ef8}
+.bldg-wrap{display:flex;flex-wrap:wrap;gap:8px}
+.cb-wrap{display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px;color:#9aa5c4}
+.cb-wrap.on{color:#7c9ef8}
+.yn-wrap{display:flex;flex-wrap:wrap;gap:16px}
+.form-save-btn{background:#4f6ef7;color:white;border:none;border-radius:6px;padding:8px 20px;font-size:14px;cursor:pointer;font-weight:700}
+.form-cancel-btn{background:#2a2d3e;color:#9aa5c4;border:none;border-radius:6px;padding:8px 16px;font-size:14px;cursor:pointer}
+@media(max-width:700px){
+  .sidebar{width:100%!important;height:auto;max-height:30vh;border-right:none;border-bottom:1px solid #2a2d3e}
+  .loan-wrap{flex-direction:column}
+  .panels{display:none}
+  .product-sidebar{width:100%!important;border-right:none;border-bottom:1px solid #2a2d3e;max-height:35vh}
+  .product-wrap{flex-direction:column}
+}
+</style>
+</head>
+<body>
+<div id="loading"><div class="spinner"></div><p>로딩 중...</p></div>
+<div id="login-page" class="hidden">
+  <div class="login-card">
+    <div class="login-logo">🏦</div>
+    <h1 class="login-title">대출 관리 시스템</h1>
+    <p class="login-sub">Loan Management System</p>
+    <div class="login-field"><label class="login-label">이메일</label><input class="login-input" id="login-email" type="email" placeholder="example@email.com"/></div>
+    <div class="login-field"><label class="login-label">비밀번호</label><input class="login-input" id="login-pw" type="password" placeholder="••••••••"/></div>
+    <p class="login-error hidden" id="login-error"></p>
+    <button class="login-btn" id="login-btn">로그인</button>
+  </div>
+</div>
+<div id="app" class="hidden">
+  <header class="header">
+    <div class="header-left"><span style="font-size:20px">🏦</span><span class="header-title">대출 관리 시스템</span></div>
+    <div class="header-right"><span class="user-email" id="user-email"></span><button class="logout-btn" id="logout-btn">로그아웃</button></div>
+  </header>
+  <nav class="tab-bar">
+    <button class="tab-btn active" data-tab="loan">📁 진행현황</button>
+    <button class="tab-btn" data-tab="product">🏦 상품 관리</button>
+  </nav>
+  <div id="tab-loan">
+    <div class="loan-wrap">
+      <div class="sidebar"><div class="sidebar-header">🏢 업체 목록</div><div class="company-list" id="company-list"></div></div>
+      <div class="main-panel">
+        <div class="main-header">
+          <span class="main-title" id="main-title">업체를 선택하세요</span>
+          <input class="search-input" id="search-input" placeholder="🔍 검색..."/>
+          <button class="share-btn hidden" id="share-btn">📤 텔레그램 공유</button>
+        </div>
+        <div class="loan-list" id="loan-list"></div>
+        <div class="add-row hidden" id="add-row">
+          <input class="add-input" id="add-input" placeholder="고객명 입력..."/>
+          <button class="add-btn" id="add-btn">➕ 추가</button>
+        </div>
+      </div>
+      <div class="panels">
+        <div class="shared-panel"><div class="shared-header">📌 진행건</div><textarea class="shared-area" id="progress-area" placeholder="내용을 입력하세요..."></textarea></div>
+        <div class="shared-panel"><div class="shared-header">📋 지점접수 현황</div><textarea class="shared-area" id="notice-area" placeholder="내용을 입력하세요..."></textarea></div>
+      </div>
+    </div>
+  </div>
+  <div id="tab-product" class="hidden">
+    <div id="product-main-view" class="product-wrap">
+      <div class="product-sidebar">
+        <div class="product-top"><input class="product-search" id="product-search" placeholder="🔍 지역, LTV, 선말소..."/><button class="product-add-btn" id="product-add-btn">＋</button></div>
+        <div class="product-count" id="product-count">0개</div>
+        <div class="product-list" id="product-list"></div>
+      </div>
+      <div class="product-detail" id="product-detail"><div class="product-placeholder">← 상품을 선택하세요</div></div>
+    </div>
+    <div id="product-form-view" class="form-wrap hidden"></div>
+  </div>
+</div>
+<script type="module">
+import{initializeApp}from'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
+import{getAuth,signInWithEmailAndPassword,onAuthStateChanged,signOut}from'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
+import{getFirestore,collection,doc,onSnapshot,setDoc,addDoc,updateDoc,deleteDoc,query,where,serverTimestamp}from'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
+
+// ══════════════════════════════════════
+// 🔧 Firebase 설정값 - 여기를 수정하세요
+// ══════════════════════════════════════
+const firebaseConfig = {
+  apiKey: "AIzaSyBi-FrJM5RB5nRc0nUz4OFVpqHrw29yY9Q",
+  authDomain: "loan-management-app-9df57.firebaseapp.com",
+  projectId: "loan-management-app-9df57",
+  storageBucket: "loan-management-app-9df57.firebasestorage.app",
+  messagingSenderId: "155998706391",
+  appId: "1:155998706391:web:4982fed24d32c99ad82e92"
+};
+// ══════════════════════════════════════
+
+const app=initializeApp(firebaseConfig);
+const auth=getAuth(app);
+const db=getFirestore(app);
+const $=id=>document.getElementById(id);
+const esc=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+let currentUser=null,companies={},loans=[],products=[],selectedCompany='',selectedProduct=null,loansUnsub=null,formData={},activeSido='',sharedTimers={};
+
+// 탭
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    const t=btn.dataset.tab;
+    $('tab-loan').classList.toggle('hidden',t!=='loan');
+    $('tab-product').classList.toggle('hidden',t!=='product');
+  });
+});
+
+// 로그인
+$('login-btn').addEventListener('click',async()=>{
+  const email=$('login-email').value.trim(),pw=$('login-pw').value;
+  const err=$('login-error');
+  err.classList.add('hidden');
+  $('login-btn').textContent='로그인 중...';$('login-btn').disabled=true;
+  try{await signInWithEmailAndPassword(auth,email,pw);}
+  catch{err.textContent='이메일 또는 비밀번호가 올바르지 않습니다.';err.classList.remove('hidden');}
+  finally{$('login-btn').textContent='로그인';$('login-btn').disabled=false;}
+});
+$('login-pw').addEventListener('keydown',e=>{if(e.key==='Enter')$('login-btn').click();});
+$('logout-btn').addEventListener('click',()=>signOut(auth));
+
+// 인증
+onAuthStateChanged(auth,user=>{
+  $('loading').classList.add('hidden');
+  if(user){
+    currentUser=user;
+    $('login-page').classList.add('hidden');
+    $('app').classList.remove('hidden');
+    $('user-email').textContent=user.email;
+    initData();
+  }else{
+    currentUser=null;
+    $('app').classList.add('hidden');
+    $('login-page').classList.remove('hidden');
+    if(loansUnsub)loansUnsub();
+  }
+});
+
+function initData(){
+  // 업체 목록
+  onSnapshot(doc(db,'settings','telegram_ids'),snap=>{
+    if(!snap.exists())return;
+    companies=snap.data();
+    const names=Object.keys(companies).filter(k=>k!=='_placeholder').sort();
+    $('company-list').innerHTML=names.map(c=>`<div class="company-item${c===selectedCompany?' active':''}" data-name="${esc(c)}">${esc(c)}</div>`).join('');
+    $('company-list').querySelectorAll('.company-item').forEach(el=>el.addEventListener('click',()=>selectCompany(el.dataset.name)));
+  });
+
+  // 공유 패널
+  onSnapshot(doc(db,'shared','progress'),s=>{if(s.exists())$('progress-area').value=s.data().html||'';});
+  onSnapshot(doc(db,'shared','notice'),s=>{if(s.exists())$('notice-area').value=s.data().html||'';});
+  ['progress','notice'].forEach(key=>{
+    const area=$(key+'-area');
+    area.addEventListener('input',()=>{
+      clearTimeout(sharedTimers[key]);
+      sharedTimers[key]=setTimeout(async()=>{
+        await setDoc(doc(db,'shared',key),{html:area.value,updatedBy:currentUser.email,updatedAt:new Date().toISOString()},{merge:true});
+      },800);
+    });
+  });
+
+  // 상품
+  onSnapshot(collection(db,'products'),snap=>{
+    products=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+    renderProductList();
+  });
+
+  $('add-btn').addEventListener('click',addCustomer);
+  $('add-input').addEventListener('keydown',e=>{if(e.key==='Enter')addCustomer();});
+  $('search-input').addEventListener('input',renderLoans);
+  $('share-btn').addEventListener('click',shareToTelegram);
+  $('product-add-btn').addEventListener('click',()=>showProductForm(null));
+  $('product-search').addEventListener('input',renderProductList);
+}
+
+// ── 진행현황 ──
+function selectCompany(name){
+  selectedCompany=name;
+  $('main-title').textContent=name;
+  $('add-row').classList.remove('hidden');
+  $('share-btn').classList.remove('hidden');
+  document.querySelectorAll('.company-item').forEach(el=>el.classList.toggle('active',el.dataset.name===name));
+  if(loansUnsub)loansUnsub();
+  loansUnsub=onSnapshot(query(collection(db,'loans'),where('company','==',name)),snap=>{
+    loans=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.order??999)-(b.order??999));
+    renderLoans();
+  });
+}
+
+function renderLoans(){
+  const kw=$('search-input').value.toLowerCase();
+  const list=kw?loans.filter(l=>(l.customer||'').toLowerCase().includes(kw)||(l.status||'').toLowerCase().includes(kw)||(l.details||'').toLowerCase().includes(kw)):loans;
+  $('loan-list').innerHTML=list.map(loan=>`
+    <div class="loan-item" data-id="${loan.id}">
+      <div class="loan-header">
+        <div class="customer-info">
+          <div class="customer-name">${esc(loan.customer||'')}</div>
+          ${loan.status&&loan.status!=='-'?`<div class="customer-status">${esc(loan.status)}</div>`:''}
+        </div>
+        <div class="loan-actions">
+          <button class="edit-btn" data-id="${loan.id}">수정</button>
+          <button class="del-btn" data-id="${loan.id}">삭제</button>
+        </div>
+      </div>
+      ${loan.details?`<div class="loan-details">${esc(loan.details)}</div>`:''}
+      <div class="edit-form hidden" id="ef-${loan.id}">
+        <input class="edit-input" id="ec-${loan.id}" placeholder="고객명" value="${esc(loan.customer||'')}"/>
+        <input class="edit-input" id="es-${loan.id}" placeholder="상태" value="${esc(loan.status||'')}"/>
+        <textarea class="edit-textarea" id="ed-${loan.id}" rows="3" placeholder="상세내용">${esc(loan.details||'')}</textarea>
+        <div class="edit-actions">
+          <button class="save-btn" data-id="${loan.id}">저장</button>
+          <button class="cancel-btn">취소</button>
+        </div>
+      </div>
+    </div>
+  `).join('')||'<div style="color:#3a4060;padding:20px;text-align:center">고객이 없습니다</div>';
+
+  $('loan-list').querySelectorAll('.edit-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const id=btn.dataset.id,item=btn.closest('.loan-item');
+      item.querySelector('.customer-info').style.display='none';
+      const det=item.querySelector('.loan-details');if(det)det.style.display='none';
+      item.querySelector('.loan-actions').style.display='none';
+      $('ef-'+id).classList.remove('hidden');
+    });
+  });
+  $('loan-list').querySelectorAll('.cancel-btn').forEach(btn=>btn.addEventListener('click',renderLoans));
+  $('loan-list').querySelectorAll('.save-btn').forEach(btn=>{
+    btn.addEventListener('click',async()=>{
+      const id=btn.dataset.id;
+      await updateDoc(doc(db,'loans',id),{customer:$('ec-'+id).value.trim(),status:$('es-'+id).value.trim(),details:$('ed-'+id).value.trim(),updatedBy:currentUser.email,updatedAt:new Date().toISOString()});
+    });
+  });
+  $('loan-list').querySelectorAll('.del-btn').forEach(btn=>{
+    btn.addEventListener('click',async()=>{if(!confirm('삭제할까요?'))return;await deleteDoc(doc(db,'loans',btn.dataset.id));});
+  });
+}
+
+async function addCustomer(){
+  const inp=$('add-input'),name=inp.value.trim();
+  if(!name||!selectedCompany)return;
+  const ref=doc(collection(db,'loans'));
+  await setDoc(ref,{customer:name,status:'-',details:'',company:selectedCompany,order:loans.length,id:ref.id});
+  inp.value='';
+}
+
+async function shareToTelegram(){
+  if(!selectedCompany)return;
+  const tid=companies[selectedCompany];
+  if(!tid){alert('텔레그램 ID가 없습니다.');return;}
+  let msg='진행현황\n';
+  loans.forEach(l=>{
+    const txt=[l.customer,l.status,l.details].filter(Boolean).join('\n');
+    if(txt.trim())msg+='\n'+txt+'\n----------------------------------------';
+  });
+  await addDoc(collection(db,'commands'),{chat_id:isNaN(tid)?tid:parseInt(tid),text:msg,status:'pending',timestamp:serverTimestamp()});
+  alert('['+selectedCompany+'] 텔레그램 전송 완료');
+}
+
+// ── 상품관리 ──
+const SIDO_ALIAS={'서울':'서울특별시','경기':'경기도','인천':'인천광역시','부산':'부산광역시','대구':'대구광역시','광주':'광주광역시','대전':'대전광역시','울산':'울산광역시','세종':'세종특별자치시','강원':'강원특별자치도','충북':'충청북도','충남':'충청남도','전북':'전라북도','전남':'전라남도','경북':'경상북도','경남':'경상남도','제주':'제주특별자치도'};
+const REGIONS={"서울특별시":["강남구","강동구","강북구","강서구","관악구","광진구","구로구","금천구","노원구","도봉구","동대문구","동작구","마포구","서대문구","서초구","성동구","성북구","송파구","양천구","영등포구","용산구","은평구","종로구","중구","중랑구"],"경기도":["가평군","고양시","과천시","광명시","광주시","구리시","군포시","김포시","남양주시","동두천시","부천시","성남시","수원시","시흥시","안산시","안성시","안양시","양주시","양평군","여주시","연천군","오산시","용인시","의왕시","의정부시","이천시","파주시","평택시","포천시","하남시","화성시"],"인천광역시":["강화군","계양구","남동구","동구","미추홀구","부평구","서구","연수구","옹진군","중구"],"부산광역시":["강서구","금정구","기장군","남구","동구","동래구","부산진구","북구","사상구","사하구","서구","수영구","연제구","영도구","중구","해운대구"],"대구광역시":["달서구","달성군","동구","북구","서구","수성구","중구","남구"],"광주광역시":["광산구","남구","동구","북구","서구"],"대전광역시":["대덕구","동구","서구","유성구","중구"],"울산광역시":["남구","동구","북구","울주군","중구"],"세종특별자치시":["세종시"],"강원특별자치도":["강릉시","고성군","동해시","삼척시","속초시","양구군","양양군","영월군","원주시","인제군","정선군","철원군","춘천시","태백시","평창군","홍천군","화천군","횡성군"],"충청북도":["괴산군","단양군","보은군","영동군","옥천군","음성군","제천시","증평군","진천군","청주시","충주시"],"충청남도":["계룡시","공주시","금산군","논산시","당진시","보령시","부여군","서산시","서천군","아산시","예산군","천안시","청양군","태안군","홍성군"],"전라북도":["고창군","군산시","김제시","남원시","무주군","부안군","순창군","완주군","익산시","임실군","장수군","전주시","정읍시","진안군"],"전라남도":["강진군","고흥군","곡성군","광양시","구례군","나주시","담양군","목포시","무안군","보성군","순천시","신안군","여수시","영광군","영암군","완도군","장성군","장흥군","진도군","함평군","해남군","화순군"],"경상북도":["경산시","경주시","고령군","구미시","군위군","김천시","문경시","봉화군","상주시","성주군","안동시","영덕군","영양군","영주시","영천시","예천군","울릉군","울진군","의성군","청도군","청송군","칠곡군","포항시"],"경상남도":["거제시","거창군","고성군","김해시","남해군","밀양시","사천시","산청군","양산시","의령군","진주시","창녕군","창원시","통영시","하동군","함안군","함양군","합천군"],"제주특별자치도":["서귀포시","제주시"]};
+
+function getSearchText(p){
+  const regions=[...(p.regions||[])];
+  (p.regions||[]).forEach(r=>{
+    Object.entries(REGIONS).forEach(([sido,cities])=>{if(r.includes('전체')&&r.includes(sido))regions.push(...cities);});
+    Object.entries(SIDO_ALIAS).forEach(([alias,full])=>{if(r.includes(full))regions.push(alias);});
+  });
+  return[p.name,p.product,...regions,...(p.building_types||[]),p.ltv,p.rate,p.junior_rank,p.junior_note,p.individual,p.business,p.memo,p.seonmalso?'선말소':'',p.tenant?'세입자':'',p.eviction_fund?'퇴거':'',p.mci?'MCI':''].join(' ').toLowerCase();
+}
+
+function renderProductList(){
+  const kws=$('product-search').value.trim().toLowerCase().split(/[\s,]+/).filter(Boolean);
+  const filtered=kws.length?products.filter(p=>{const t=getSearchText(p);return kws.every(k=>t.includes(k)||(SIDO_ALIAS[k]&&t.includes(SIDO_ALIAS[k].toLowerCase())));}):products;
+  $('product-count').textContent=filtered.length+'개';
+  $('product-list').innerHTML=filtered.map(p=>{
+    const stopped=(p.product||'').includes('[중단]');
+    return`<div class="product-item${selectedProduct?.id===p.id?' active':''}" data-id="${p.id}">
+      <div class="product-name-row">${stopped?'<span class="stop-dot">●</span>':''}<span style="color:${stopped?'#ef5350':'#e8eaf0'}">${esc(p.name)}</span></div>
+      <div class="product-sub">${(p.regions||[]).slice(0,2).map(r=>esc(r)).join(', ')}${(p.regions||[]).length>2?'...':''}</div>
+    </div>`;
+  }).join('')||'<div style="color:#3a4060;padding:20px;text-align:center">검색 결과 없음</div>';
+  $('product-list').querySelectorAll('.product-item').forEach(el=>{
+    el.addEventListener('click',()=>{
+      selectedProduct=products.find(p=>p.id===el.dataset.id);
+      renderProductList();renderProductDetail(selectedProduct);
+    });
+  });
+}
+
+function renderProductDetail(p){
+  if(!p)return;
+  const stopped=(p.product||'').includes('[중단]');
+  const tag=(text,cls='')=>`<span class="tag ${cls}">${esc(text)}</span>`;
+  $('product-detail').innerHTML=`
+    ${stopped?'<div class="detail-stop">🚫 중단된 상품</div>':''}
+    <h2 class="detail-name">${esc(p.name)}</h2>
+    ${p.product?`<div class="detail-product-lbl">${esc((p.product||'').replace(' [중단]',''))}</div>`:''}
+    <div class="detail-btn-row">
+      <button class="detail-edit-btn" data-id="${p.id}">✏ 수정</button>
+      <button class="detail-del-btn" data-id="${p.id}">🗑 삭제</button>
+    </div>
+    <hr class="detail-sep"/>
+    ${(p.regions||[]).length?`<div class="d-field"><div class="d-label">가능 지역</div><div class="d-region">${p.regions.map(r=>esc(r)).join(', ')}</div></div>`:''}
+    ${(p.building_types||[]).length?`<div class="d-field"><div class="d-label">건물 유형</div><div>${p.building_types.map(b=>tag(b)).join('')}</div></div>`:''}
+    <div class="d-grid">
+      ${p.ltv?`<div class="d-field"><div class="d-label">LTV</div><div class="d-val">${esc(p.ltv)}</div></div>`:''}
+      ${p.rate?`<div class="d-field"><div class="d-label">금리</div><div class="d-val">${esc(p.rate)}</div></div>`:''}
+    </div>
+    <div class="d-field"><div class="d-label">후순위</div>${tag(p.junior_rank||'불가',p.junior_rank==='불가'?'red':'green')} ${p.junior_note?`<span style="color:#9aa5c4;font-size:12px;margin-left:6px">${esc(p.junior_note)}</span>`:''}</div>
+    <div class="d-field"><div class="d-label">가능 여부</div>${[['선말소','seonmalso'],['세입자 물건지','tenant'],['퇴거자금','eviction_fund'],['MCI','mci']].map(([l,k])=>tag((p[k]?'✓ ':'✗ ')+l,p[k]?'green':'red')).join('')}</div>
+    <div class="d-grid">
+      ${p.individual?`<div class="d-field"><div class="d-label">가계/동일인</div><div class="d-val">${esc(p.individual)}</div></div>`:''}
+      ${p.business?`<div class="d-field"><div class="d-label">사업자</div><div class="d-val">${esc(p.business)}</div></div>`:''}
+      ${p.purpose?`<div class="d-field"><div class="d-label">용도</div><div class="d-val">${esc(p.purpose)}</div></div>`:''}
+    </div>
+    ${p.memo?`<div class="d-field"><div class="d-label">메모</div><div class="d-val" style="color:#9aa5c4">${esc(p.memo)}</div></div>`:''}
+  `;
+  $('product-detail').querySelector('.detail-edit-btn').addEventListener('click',()=>showProductForm(p.id));
+  $('product-detail').querySelector('.detail-del-btn').addEventListener('click',async()=>{
+    if(!confirm('삭제할까요?'))return;
+    await deleteDoc(doc(db,'products',p.id));
+    selectedProduct=null;
+    $('product-detail').innerHTML='<div class="product-placeholder">← 상품을 선택하세요</div>';
+  });
+}
+
+function showProductForm(id){
+  const p=id?products.find(x=>x.id===id):null;
+  formData=p?JSON.parse(JSON.stringify(p)):{name:'',product:'컨비',regions:[],building_types:[],ltv:'',rate:'',junior_rank:'불가',junior_note:'',seonmalso:false,tenant:false,eviction_fund:false,mci:false,individual:'',business:'',purpose:'',memo:''};
+  activeSido=Object.keys(REGIONS)[0];
+  $('product-main-view').classList.add('hidden');
+  $('product-form-view').classList.remove('hidden');
+  renderForm(id);
+}
+
+function renderForm(id){
+  const f=formData;
+  $('product-form-view').innerHTML=`
+    <div class="form-header">
+      <div class="form-title">${id?'상품 수정':'상품 등록'}</div>
+      <div style="display:flex;gap:8px">
+        <button class="form-cancel-btn" id="f-cancel">취소</button>
+        <button class="form-save-btn" id="f-save">저장</button>
+      </div>
+    </div>
+    <div class="form-body">
+      <div class="f-section">
+        <div class="f-section-title">기본 정보</div>
+        <div class="f-row"><label class="f-label">지점명 *</label><input class="f-input" id="f-name" value="${esc(f.name||'')}"/></div>
+        <div class="f-row"><label class="f-label">상품명</label><input class="f-input" id="f-product" value="${esc(f.product||'')}"/></div>
+      </div>
+      <div class="f-section">
+        <div class="f-section-title">가능 지역</div>
+        <div class="region-wrap">
+          <div class="sido-list" id="sido-list">${Object.keys(REGIONS).map(s=>`<button class="sido-btn${s===activeSido?' active':''}" data-sido="${s}">${s}</button>`).join('')}</div>
+          <div class="gu-wrap">
+            <div class="gu-ctrl"><span class="gu-ctrl-title" id="gu-title">${activeSido}</span><button class="small-btn" id="gu-all">전체선택</button><button class="small-btn gray" id="gu-none">전체해제</button></div>
+            <div class="gu-grid" id="gu-grid">${renderGuGrid()}</div>
+          </div>
+        </div>
+      </div>
+      <div class="f-section">
+        <div class="f-section-title">건물 유형</div>
+        <div class="bldg-wrap" id="bldg-wrap">${["아파트","빌라","오피스텔","단독","다가구","상가","연립","다세대","토지"].map(b=>{const on=(f.building_types||[]).includes(b);return`<label class="cb-wrap${on?' on':''}" data-bldg="${b}"><input type="checkbox" ${on?'checked':''}> ${b}</label>`;}).join('')}</div>
+      </div>
+      <div class="f-section">
+        <div class="f-section-title">LTV / 금리</div>
+        <div class="f-row"><label class="f-label">LTV</label><input class="f-input" id="f-ltv" value="${esc(f.ltv||'')}"/></div>
+        <div class="f-row"><label class="f-label">금리</label><input class="f-input" id="f-rate" value="${esc(f.rate||'')}"/></div>
+      </div>
+      <div class="f-section">
+        <div class="f-section-title">후순위</div>
+        <div class="f-row"><label class="f-label">가능범위</label><select class="f-select" id="f-jr">${['불가','2순위','3순위 이상','순위 무관'].map(v=>`<option${v===f.junior_rank?' selected':''}>${v}</option>`).join('')}</select></div>
+        <div class="f-row"><label class="f-label">조건</label><input class="f-input" id="f-jn" value="${esc(f.junior_note||'')}"/></div>
+      </div>
+      <div class="f-section">
+        <div class="f-section-title">가능 여부</div>
+        <div class="yn-wrap">${[['선말소','seonmalso'],['세입자 물건지','tenant'],['퇴거자금','eviction_fund'],['MCI','mci']].map(([l,k])=>`<label class="cb-wrap${f[k]?' on':''}" data-yn="${k}"><input type="checkbox" ${f[k]?'checked':''}> ${l}</label>`).join('')}</div>
+      </div>
+      <div class="f-section">
+        <div class="f-section-title">대출 대상</div>
+        <div class="f-row"><label class="f-label">가계/동일인</label><input class="f-input" id="f-individual" value="${esc(f.individual||'')}"/></div>
+        <div class="f-row"><label class="f-label">사업자</label><input class="f-input" id="f-business" value="${esc(f.business||'')}"/></div>
+        <div class="f-row"><label class="f-label">용도</label><input class="f-input" id="f-purpose" value="${esc(f.purpose||'')}"/></div>
+      </div>
+      <div class="f-section"><div class="f-section-title">메모</div><textarea class="f-input" id="f-memo" style="height:70px;resize:vertical">${esc(f.memo||'')}</textarea></div>
+    </div>
+  `;
+  $('sido-list').querySelectorAll('.sido-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      activeSido=btn.dataset.sido;
+      $('sido-list').querySelectorAll('.sido-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      $('gu-title').textContent=activeSido;
+      $('gu-grid').innerHTML=renderGuGrid();
+      bindGuEvents();
+    });
+  });
+  $('gu-all').addEventListener('click',()=>{REGIONS[activeSido].forEach(gu=>{const k=`${activeSido} ${gu}`;if(!formData.regions.includes(k))formData.regions.push(k);});$('gu-grid').innerHTML=renderGuGrid();bindGuEvents();});
+  $('gu-none').addEventListener('click',()=>{formData.regions=formData.regions.filter(r=>!r.startsWith(activeSido));$('gu-grid').innerHTML=renderGuGrid();bindGuEvents();});
+  bindGuEvents();
+  $('bldg-wrap').querySelectorAll('.cb-wrap').forEach(el=>{
+    el.addEventListener('click',e=>{
+      const b=el.dataset.bldg,cb=el.querySelector('input');
+      if(e.target!==cb)cb.checked=!cb.checked;
+      if(cb.checked){if(!formData.building_types.includes(b))formData.building_types.push(b);}else formData.building_types=formData.building_types.filter(x=>x!==b);
+      el.classList.toggle('on',cb.checked);
+    });
+  });
+  $('product-form-view').querySelectorAll('.cb-wrap[data-yn]').forEach(el=>{
+    el.addEventListener('click',e=>{
+      const k=el.dataset.yn,cb=el.querySelector('input');
+      if(e.target!==cb)cb.checked=!cb.checked;
+      formData[k]=cb.checked;
+      el.classList.toggle('on',cb.checked);
+    });
+  });
+  $('f-cancel').addEventListener('click',()=>{$('product-form-view').classList.add('hidden');$('product-main-view').classList.remove('hidden');});
+  $('f-save').addEventListener('click',async()=>{
+    const data={...formData,name:$('f-name').value.trim(),product:$('f-product').value.trim(),ltv:$('f-ltv').value.trim(),rate:$('f-rate').value.trim(),junior_rank:$('f-jr').value,junior_note:$('f-jn').value.trim(),individual:$('f-individual').value.trim(),business:$('f-business').value.trim(),purpose:$('f-purpose').value.trim(),memo:$('f-memo').value.trim()};
+    if(!data.name){alert('지점명을 입력하세요');return;}
+    if(id)await updateDoc(doc(db,'products',id),data);else await addDoc(collection(db,'products'),data);
+    $('product-form-view').classList.add('hidden');$('product-main-view').classList.remove('hidden');
+  });
+}
+
+function renderGuGrid(){return(REGIONS[activeSido]||[]).map(gu=>{const k=`${activeSido} ${gu}`,on=formData.regions.includes(k);return`<label class="gu-label${on?' on':''}" data-gu="${gu}"><input type="checkbox" ${on?'checked':''}> ${esc(gu)}</label>`;}).join('');}
+function bindGuEvents(){$('gu-grid').querySelectorAll('.gu-label').forEach(el=>{el.addEventListener('click',e=>{const gu=el.dataset.gu,k=`${activeSido} ${gu}`,cb=el.querySelector('input');if(e.target!==cb)cb.checked=!cb.checked;if(cb.checked){if(!formData.regions.includes(k))formData.regions.push(k);}else formData.regions=formData.regions.filter(r=>r!==k);el.classList.toggle('on',cb.checked);});});}
+</script>
+</body>
+</html>
